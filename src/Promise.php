@@ -2,22 +2,59 @@
 
 namespace React\Promise;
 
+use React\Promise\Internal\Queue;
+
 final class Promise implements PromiseInterface
 {
     private $canceller;
     private $result = null;
+	
     private $state = 'pending';
+    private static $loop = null;
+	private $waitFn;
+    private $isWaitRequired = false;
 
     private $handlers = [];
 
     private $requiredCancelRequests = 0;
 
-    public function __construct(callable $resolver, callable $canceller = null)
+    public function __construct( ...$resolverCanceller)
     {
-        $this->canceller = $canceller;
-        $this->call($resolver);
+		$callResolver = isset($resolverCanceller[0]) ? $resolverCanceller[0] : null;		
+		$childLoop = $this->isEventLoopAvailable($callResolver) ? $callResolver : null;
+		$callResolver = $this->isEventLoopAvailable($callResolver) ? null : $callResolver;	
+		
+		$callCanceller = isset($resolverCanceller[1]) ? $resolverCanceller[1] : null;
+		$childLoop = $this->isEventLoopAvailable($callCanceller) ? $callCanceller : $childLoop;
+		$callCanceller = $this->isEventLoopAvailable($callCanceller) ? null : $callCanceller;	
+				
+		$loop = isset($resolverCanceller[2]) ? $resolverCanceller[2] : self::$loop;		
+		$childLoop = $this->isEventLoopAvailable($loop) ? $loop : $childLoop;
+		self::$loop = $this->isEventLoopAvailable($childLoop) ? $childLoop : new Queue();
+		
+		$this->waitFn = is_callable($callResolver) ? $callResolver : null;
+        $this->canceller = is_callable($callCanceller) ? $callCanceller : null;
+			
+		if (is_callable($callResolver) && !$this->isWaitRequired) {
+			$this->call($callResolver);
+		}
     }
 
+	private function isEventLoopAvailable($instance = null): bool
+	{
+		$isInstanceiable = false;
+		if ($instance instanceof TaskQueueInterface)
+			$isInstanceiable = true;
+		elseif ($instance instanceof LoopInterface)
+			$isInstanceiable = true;
+		elseif ($instance instanceof Queue)
+			$isInstanceiable = true;
+		elseif ($instance instanceof Loop)
+			$isInstanceiable = true;
+			
+		return $isInstanceiable;
+	}
+	
     public function then(callable $onFulfilled = null, callable $onRejected = null)
     {
         if (null !== $this->result) {
@@ -211,6 +248,11 @@ final class Promise implements PromiseInterface
         }
     }
 	
+    public function getLoop()
+    {		
+        return self::$loop;
+    }	
+	
     /**
      * Returns the promise state.
      *
@@ -258,4 +300,26 @@ final class Promise implements PromiseInterface
     {
         return !$this->isPending() && $this->result->isRejected();
     }
+	
+	public function implement(callable $function, PromiseInterface $promise = null)
+	{		
+        if (self::$loop) {
+			$loop = self::$loop;
+			
+			$othersLoop = method_exists($loop, 'futureTick') ? [$loop, 'futureTick'] : null;
+			$othersLoop = method_exists($loop, 'nextTick') ? [$loop, 'nextTick'] : $othersLoop;
+			$othersLoop = method_exists($loop, 'addTick') ? [$loop, 'addTick'] : $othersLoop;
+			$othersLoop = method_exists($loop, 'onTick') ? [$loop, 'onTick'] : $othersLoop;
+			$othersLoop = method_exists($loop, 'add') ? [$loop, 'add'] : $othersLoop;
+			
+			if ($othersLoop)
+				call_user_func_array($othersLoop, $function); 
+			else 	
+				$loop->enqueue($function);
+        } else {
+            return $function();
+        } 
+		
+		return $promise;
+	}
 }
