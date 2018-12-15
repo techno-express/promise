@@ -333,34 +333,7 @@ final class Promise implements PromiseInterface
 		
 		return $this->state;
 	}
-	
-    /**
-     * @override
-     * @inheritDoc
-     */
-    public function isPending()
-    {
-        return $this->result === null;
-    }
-
-    /**
-     * @override
-     * @inheritDoc
-     */
-    public function isFulfilled()
-    {
-        return !$this->isPending() && $this->result->isFulfilled();
-    }
-
-    /**
-     * @override
-     * @inheritDoc
-     */
-    public function isRejected()
-    {
-        return !$this->isPending() && $this->result->isRejected();
-    }
-	
+		
 	public function implement(callable $function, PromiseInterface $promise = null)
 	{		
         if (self::$loop) {
