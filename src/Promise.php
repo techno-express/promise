@@ -5,8 +5,7 @@ namespace React\Promise;
 final class Promise implements PromiseInterface
 {
     private $canceller;
-    private $result = null;
-    private $state = 'pending';
+    private $result;
 
     private $handlers = [];
 
@@ -209,53 +208,5 @@ final class Promise implements PromiseInterface
         } catch (\Exception $e) {
             $this->reject($e);
         }
-    }
-	
-    /**
-     * Returns the promise state.
-     *
-     *  'pending'	The promise is still open
-     *  'fulfilled'	The promise completed successfully
-     *  'rejected'	The promise failed
-     *
-     * @return string A promise state
-     */
-	public function getState()
-	{
-		if ($this->isPending())
-			$this->state = 'pending';
-		elseif ($this->isFulfilled())
-			$this->state = 'fulfilled';
-		elseif ($this->isRejected())
-			$this->state = 'rejected';
-		
-		return $this->state;
-	}
-	
-    /**
-     * @override
-     * @inheritDoc
-     */
-    public function isPending()
-    {
-        return $this->result === null;
-    }
-
-    /**
-     * @override
-     * @inheritDoc
-     */
-    public function isFulfilled()
-    {
-        return !$this->isPending() && $this->result->isFulfilled();
-    }
-
-    /**
-     * @override
-     * @inheritDoc
-     */
-    public function isRejected()
-    {
-        return !$this->isPending() && $this->result->isRejected();
     }
 }
