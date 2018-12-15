@@ -2,7 +2,9 @@
 
 namespace React\Promise;
 
-use React\Promise\Internal\Queue;
+//use React\Promise\Internal\Queue;
+use React\EventLoop\Factory;
+use React\EventLoop\LoopInterface;
 
 final class Promise implements PromiseInterface
 {
@@ -11,7 +13,7 @@ final class Promise implements PromiseInterface
 	
     private $state = 'pending';
     private static $loop = null;
-	private $waitFn;
+	private $waitFunction;
     private $isWaitRequired = false;
 
     private $handlers = [];
@@ -30,9 +32,9 @@ final class Promise implements PromiseInterface
 				
 		$loop = isset($resolverCanceller[2]) ? $resolverCanceller[2] : self::$loop;		
 		$childLoop = $this->isEventLoopAvailable($loop) ? $loop : $childLoop;
-		self::$loop = $this->isEventLoopAvailable($childLoop) ? $childLoop : new Queue();
+		self::$loop = $this->isEventLoopAvailable($childLoop) ? $childLoop : Factory::create();
 		
-		$this->waitFn = is_callable($callResolver) ? $callResolver : null;
+		$this->waitFunction = is_callable($callResolver) ? $callResolver : null;
         $this->canceller = is_callable($callCanceller) ? $callCanceller : null;
 			
 		if (is_callable($callResolver) && !$this->isWaitRequired) {
@@ -158,7 +160,7 @@ final class Promise implements PromiseInterface
         };
     }
 
-    private function resolve($value = null)
+    public function resolve($value = null)
     {
         if (null !== $this->result) {
             return;
@@ -167,7 +169,7 @@ final class Promise implements PromiseInterface
         $this->settle(resolve($value));
     }
 
-    private function reject($reason = null)
+    public function reject($reason = null)
     {
         if (null !== $this->result) {
             return;
