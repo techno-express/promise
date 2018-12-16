@@ -116,4 +116,11 @@ final class RejectedPromise implements PromiseInterface
     {
         return $this->reason;
     }
+	
+    public function wait($unwrap = true)
+    {		
+        if ($unwrap) {
+            throw $this->reason;
+        }
+    }
 }

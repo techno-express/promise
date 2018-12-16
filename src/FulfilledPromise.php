@@ -104,4 +104,9 @@ final class FulfilledPromise implements PromiseInterface
     {
         throw LogicException::reasonFromNonRejectedPromise();
     }
+	
+    public function wait($unwrap = true)
+    {		
+        return $unwrap ? $this->value : null;
+    }
 }

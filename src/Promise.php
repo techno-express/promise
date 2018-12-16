@@ -9,6 +9,10 @@ use React\Promise\Exception\LogicException;
 
 final class Promise implements PromiseInterface
 {
+	const PENDING = 'pending';
+	const REJECTED = 'rejected';	
+	const FULFILLED = 'fulfilled';
+	
     private $canceller;
 
     /**
@@ -21,7 +25,7 @@ final class Promise implements PromiseInterface
     private $requiredCancelRequests = 0;
     private $isCancelled = false;
 	
-    private $state = 'pending';
+    private $state = self::PENDING;
     private static $loop = null;
 	private $waitFunction;
     private $isWaitRequired = false;
@@ -40,27 +44,59 @@ final class Promise implements PromiseInterface
 		$childLoop = $this->isEventLoopAvailable($loop) ? $loop : $childLoop;
 		self::$loop = $this->isEventLoopAvailable($childLoop) ? $childLoop : Factory::create();
 		
+        $this->canceller = is_callable($callCanceller) ? $callCanceller : null;	
+		
+		/**
+		* The difference in Guzzle promise implementations mainly lay in the construction.
+		*
+		* According to https://github.com/promises-aplus/constructor-spec/issues/18 it's not valid. 
+		* The constructor starts the fate of the promise. Which has to been delayed, under Guzzle. 
+		*
+		* The wait method is necessary in certain callable functions situations. 
+		* The constructor will fail it's execution when trying to access member method that's null. 
+		* It will happen when passing an promise object not fully created, itself.
+		*
+		* Normally an promise is attached to an external running event loop, no need to start the process.
+		* The wait function/method both starts and stops it, internally.
+		*/
 		$this->waitFunction = is_callable($callResolver) ? $callResolver : null;
-        $this->canceller = is_callable($callCanceller) ? $callCanceller : null;
+		
+		$promiseFunction = function () use($callResolver) { 
+			if (is_callable($callResolver)) {
+				$callResolver(
+					[$this, 'resolve'],
+					[$this, 'reject']
+				);
+			}			
+		};
 			
-		if (is_callable($callResolver) && !$this->isWaitRequired) {
-			$this->call($callResolver);
-		}
+		//if (is_callable($callResolver) && !$this->isWaitRequired) {
+		//	$this->call($callResolver);
+		//}
+		try {
+			$promiseFunction();
+		} catch (\Throwable $e) {
+			$this->isWaitRequired = true;
+			$this->implement($promiseFunction);
+		} catch (\Exception $exception) {
+			$this->isWaitRequired = true;
+			$this->implement($promiseFunction);
+		}	
     }
 
 	private function isEventLoopAvailable($instance = null): bool
 	{
-		$isInstanceiable = false;
+		$isInstantiable = false;
 		if ($instance instanceof TaskQueueInterface)
-			$isInstanceiable = true;
+			$isInstantiable = true;
 		elseif ($instance instanceof LoopInterface)
-			$isInstanceiable = true;
+			$isInstantiable = true;
 		elseif ($instance instanceof Queue)
-			$isInstanceiable = true;
+			$isInstantiable = true;
 		elseif ($instance instanceof Loop)
-			$isInstanceiable = true;
+			$isInstantiable = true;
 			
-		return $isInstanceiable;
+		return $isInstantiable;
 	}
 	
     public function then(callable $onFulfilled = null, callable $onRejected = null)
@@ -325,11 +361,11 @@ final class Promise implements PromiseInterface
 	public function getState()
 	{
 		if ($this->isPending())
-			$this->state = 'pending';
+			$this->state = self::PENDING;
 		elseif ($this->isFulfilled())
-			$this->state = 'fulfilled';
+			$this->state = self::FULFILLED;
 		elseif ($this->isRejected())
-			$this->state = 'rejected';
+			$this->state = self::REJECTED;
 		
 		return $this->state;
 	}
@@ -339,20 +375,87 @@ final class Promise implements PromiseInterface
         if (self::$loop) {
 			$loop = self::$loop;
 			
-			$othersLoop = method_exists($loop, 'futureTick') ? [$loop, 'futureTick'] : null;
-			$othersLoop = method_exists($loop, 'nextTick') ? [$loop, 'nextTick'] : $othersLoop;
-			$othersLoop = method_exists($loop, 'addTick') ? [$loop, 'addTick'] : $othersLoop;
-			$othersLoop = method_exists($loop, 'onTick') ? [$loop, 'onTick'] : $othersLoop;
-			$othersLoop = method_exists($loop, 'add') ? [$loop, 'add'] : $othersLoop;
+			$othersLoop = null;
+			if (method_exists($loop, 'futureTick'))
+				$othersLoop = [$loop, 'futureTick']; 
+			elseif (method_exists($loop, 'nextTick'))
+				$othersLoop = [$loop, 'nextTick'];
+			elseif (method_exists($loop, 'addTick'))
+				$othersLoop = [$loop, 'addTick'];
+			elseif (method_exists($loop, 'onTick'))
+				$othersLoop = [$loop, 'onTick'];
+			elseif (method_exists($loop, 'add'))
+				$othersLoop = [$loop, 'add'];
 			
 			if ($othersLoop)
-				call_user_func_array($othersLoop, $function); 
+				call_user_func($othersLoop, $function); 
 			else 	
-				$loop->enqueue($function);
+				enqueue($function);
         } else {
             return $function();
         } 
 		
 		return $promise;
+	}
+	
+	/**
+     * Stops execution until this promise is resolved.
+     *
+     * This method stops execution completely. If the promise is successful with
+     * a value, this method will return this value. If the promise was
+     * rejected, this method will throw an exception.
+     *
+     * This effectively turns the asynchronous operation into a synchronous
+     * one. In PHP it might be useful to call this on the last promise in a
+     * chain.
+     *
+     * @return mixed
+     */
+    public function wait($unwrap = true)
+    {
+		try {
+			$loop = self::$loop;
+			$func = $this->waitFunction;
+			$this->waitFunction = null;
+			if (is_callable($func) 
+				&& method_exists($loop, 'add') 
+				&& method_exists($loop, 'run') 
+				&& $this->isWaitRequired
+			) {
+				$func([$this, 'resolve'], [$this, 'reject']);
+				$loop->run();
+			} elseif (method_exists($loop, 'run')) {
+				//if (is_callable($func) && $this->isWaitRequired) 
+					//$func([$this, 'resolve'], [$this, 'reject']);
+				$loop->run();	
+			}
+        } catch (\Exception $reason) {
+            if ($this->getState() === self::PENDING) {
+                // The promise has not been resolved yet, so reject the promise
+                // with the exception.
+                $this->reject($reason);
+            } else {
+                // The promise was already resolved, so there's a problem in
+                // the application.
+                throw $reason;
+            }
+        }
+
+		
+		if ($this->getState() === self::PENDING) {
+            $this->reject('Invoking wait did not resolve the promise');
+        } elseif ($unwrap) {
+			if ($this->getState() === self::FULFILLED) {
+				// If the state of this promise is resolved, we can return the value.
+				return $this->value();
+			} 
+			// If we got here, it means that the asynchronous operation
+			// erred. Therefore it's rejected, so throw an exception.
+			$reason = $this->reason();
+			
+			throw $reason instanceof \Exception
+				? $reason
+				: new \Exception($reason);
+		}	
 	}
 }

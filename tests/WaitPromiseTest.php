@@ -29,24 +29,21 @@ use PHPUnit\Framework\TestCase;
 
 class WaitPromiseTest extends TestCase
 {			
-	//const PENDING = Promise::PENDING;
-	//const REJECTED = Promise::REJECTED;
-	//const FULFILLED = Promise::FULFILLED;	
+	const PENDING = Promise::PENDING;
+	const REJECTED = Promise::REJECTED;
+	const FULFILLED = Promise::FULFILLED;	
 	//const PENDING = PromiseInterface::PENDING;
 	//const REJECTED = PromiseInterface::REJECTED;
 	//const FULFILLED = PromiseInterface::FULFILLED;	
 	//const PENDING = PromiseInterface::STATE_PENDING;
 	//const REJECTED = PromiseInterface::STATE_REJECTED;
-	//const FULFILLED = PromiseInterface::STATE_RESOLVED;	
-	const PENDING = 'pending';
-	const REJECTED = 'rejected';	
-	const FULFILLED = 'fulfilled';
+	//const FULFILLED = PromiseInterface::STATE_RESOLVED;
 
 	private $loop = null;
 	
 	protected function setUp()
     {
-		$this->markTestSkipped('These tests fails currently because of no wait() method, taken from Guzzle and Sabra phpunit tests, ');
+		//$this->markTestSkipped('These tests fails currently because of no wait() method, taken from Guzzle and Sabra phpunit tests.');
 		//Loop::clearInstance();
 		//Promise::clearLoop();
 		//$this->loop = Promise::getLoop(true);
@@ -61,9 +58,9 @@ class WaitPromiseTest extends TestCase
         $promise = new Promise();
         //$this->loop->nextTick(function () use ($promise) {
         //$this->loop->addTick(function () use ($promise) {
-        $this->loop->enqueue(function () use ($promise) {
-        //$this->loop->add(function () use ($promise) {
         //$this->loop->futureTick(function () use ($promise) {
+        //$this->loop->add(function () use ($promise) {
+        enqueue(function () use ($promise) {
             $promise->resolve(1);
         });
         $this->assertEquals(
@@ -77,9 +74,9 @@ class WaitPromiseTest extends TestCase
         $promise = new Promise();
         //$this->loop->nextTick(function () use ($promise) {
         //$this->loop->addTick(function () use ($promise) {
-        $this->loop->enqueue(function () use ($promise) {
-        //$this->loop->add(function () use ($promise) {
         //$this->loop->futureTick(function () use ($promise) {
+        //$this->loop->add(function () use ($promise) {
+        enqueue(function () use ($promise) {
             $promise->reject(new \OutOfBoundsException('foo'));
         });
         try {
@@ -96,9 +93,9 @@ class WaitPromiseTest extends TestCase
         $promise = new Promise();
         //$this->loop->nextTick(function () use ($promise) {
         //$this->loop->addTick(function () use ($promise) {
-        $this->loop->enqueue(function () use ($promise) {
-        //$this->loop->add(function () use ($promise) {
         //$this->loop->futureTick(function () use ($promise) {
+        //$this->loop->add(function () use ($promise) {
+        enqueue(function () use ($promise) {
             $promise->reject(new Exception('foo'));
         });
         try {
@@ -109,36 +106,6 @@ class WaitPromiseTest extends TestCase
             $this->assertEquals('foo', $e->getMessage());
         }
     }	
-						
-	/**
-     * @expectedException \LogicException
-     * @expectedExceptionMessage There were no more events in the loop. This promise will never be fulfilled.
-     */
-    public function testRejectsAndThrowsWhenWaitFailsToResolve()
-    {
-        $p = new Promise(function () {});
-        $p->wait();
-    }
-	
-    /**
-     * @expectedException \Exception
-     */
-    public function testThrowsWhenWaitingOnPromiseWithNoWaitFunction()
-    {
-        $p = new Promise();
-        $p->wait();
-    }	
-		
-    /**
-     * @expectedException \Exception
-     */
-    public function testCancelsPromiseWhenNoCancelFunction()
-    {
-        $p = new Promise();
-        $p->cancel();
-        $this->assertEquals(self::REJECTED, $p->getState());
-        $p->wait();
-    }
 		
     public function testRejectsPromiseWhenCancelFails()
     {
@@ -178,35 +145,7 @@ class WaitPromiseTest extends TestCase
         $p = new Promise(function () use (&$p, $e) { $p->reject($e); });
         $p->wait();
     }
-	
-    /**
-     * @expectedException \LogicException
-	 * /expectedExceptionMessage The promise is already resolved
-     * /expectedException \Sabre\Event\PromiseAlreadyResolvedException
-     * /expectedExceptionMessage This promise is already resolved, and you're not allowed to resolve a promise more than once
-     */
-    public function testCannotResolveNonPendingPromise()
-    {
-        $p = new Promise();
-        $p->resolve('foo');
-        $p->resolve('bar');
-        $this->assertEquals('foo', $p->wait());
-    }	
-	
-    /**
-     * @expectedException \LogicException
-     * /expectedExceptionMessage Cannot change a resolved promise to rejected
-     * /expectedException \Sabre\Event\PromiseAlreadyResolvedException
-     * /expectedExceptionMessage This promise is already resolved, and you're not allowed to resolve a promise more than once
-     */
-    public function testCannotRejectNonPendingPromise()
-    {
-        $p = new Promise();
-        $p->resolve('foo');
-        $p->reject('bar');
-        $this->assertEquals('foo', $p->wait());
-    }
-	
+		
     public function testInvokesWaitFunction()
     {
         $p = new Promise(function () use (&$p) { $p->resolve('10'); });
@@ -272,14 +211,6 @@ class WaitPromiseTest extends TestCase
         $this->assertSame('foo', $p3->wait());
     }	
 		
-    public function testWaitBehaviorIsBasedOnLastPromiseInChain()
-    {		
-        $p3 = new Promise(function () use (&$p3) { $p3->resolve('Whoop'); });
-        $p2 = new Promise(function () use (&$p2, $p3) { $p2->reject($p3); });
-        $p = new Promise(function () use (&$p, $p2) { $p->reject($p2); });
-        $this->assertEquals('Whoop', $p->wait());
-    }
-	
     public function testWaitsOnAPromiseChainEvenWhenNotUnwrapped()
     {		
         $p2 = new Promise(function () use (&$p2) {
@@ -291,35 +222,7 @@ class WaitPromiseTest extends TestCase
         $p->wait(false);
         $this->assertSame(self::REJECTED, $p2->getState());
     }
-	
-    public function testCancelsUppermostPendingPromise()
-    {
-        $called = false;
-        $p1 = new Promise(null, function () use (&$called) { $called = true; });
-        $p2 = $p1->then(function () {});
-        $p3 = $p2->then(function () {});
-        $p4 = $p3->then(function () {});
-        $p3->cancel();
-        $this->assertEquals(self::REJECTED, $p1->getState());
-        $this->assertEquals(self::REJECTED, $p2->getState());
-        $this->assertEquals(self::REJECTED, $p3->getState());
-        $this->assertEquals(self::PENDING, $p4->getState());
-        $this->assertTrue($called);
-        try {
-            $p3->wait();
-            $this->fail();
-        } catch (CancellationException $e) {
-            $this->assertContains('cancelled', $e->getMessage());
-        }
-        try {			
-            $p4->wait();
-            $this->fail();
-        } catch (CancellationException $e) {
-            $this->assertContains('cancelled', $e->getMessage());
-        }
-        $this->assertEquals(self::REJECTED, $p4->getState());
-    }	
-	
+		
     public function testInvokesWaitFnsForThens()
     {		
         $p = new Promise(function () use (&$p) { $p->resolve('a'); });
