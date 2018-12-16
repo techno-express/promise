@@ -3,13 +3,13 @@
 namespace React\Promise;
 
 use React\Promise\Promise;
-use React\Promise\Deferred;
-use React\Promise\FulfilledPromise;
-use React\Promise\RejectedPromise;
+//use React\Promise\Deferred;
+//use React\Promise\FulfilledPromise;
+//use React\Promise\RejectedPromise;
 use React\EventLoop\Factory;
 //use React\Promise\Internal\CancellationQueue;
-use React\Promise\PromiseInterface;
-use React\Promise\UnhandledRejectionException;
+//use React\Promise\PromiseInterface;
+//use React\Promise\UnhandledRejectionException;
 use PHPUnit\Framework\TestCase;
 
 class PromiseTest extends TestCase
@@ -48,28 +48,7 @@ class PromiseTest extends TestCase
 
         $this->assertEquals(6, $finalValue);
     }
-	
-	///////////////////////////////////	
-    /**
-     * @expectedException \LogicException
-     * @expectedExceptionMessage Cannot fulfill or reject a promise with itself
-     */
-    public function testCannotResolveWithSelf()
-    {
-        $p = new Promise();
-        $p->resolve($p);
-    }
-	
-    /**
-     * @expectedException \LogicException
-     * @expectedExceptionMessage Cannot fulfill or reject a promise with itself
-     */
-    public function testCannotRejectWithSelf()
-    {
-        $p = new Promise();
-        $p->reject($p);
-    }		
-	
+		
     public function testCreatesPromiseWhenFulfilledAfterThen()
     {
         $p = new Promise();
@@ -79,19 +58,7 @@ class PromiseTest extends TestCase
         $p->resolve('foo');
         $this->loop->run();
         $this->assertEquals('foo', $carry);
-    }
-	
-    public function testCreatesPromiseWhenFulfilledBeforeThen()
-    {
-        $p = new Promise();
-        $p->resolve('foo');
-        $carry = null;
-        $p2 = $p->then(function ($v) use (&$carry) { $carry = $v; });
-        $this->assertNotSame($p, $p2);
-        $this->assertNull($carry);
-        $this->loop->run();
-        $this->assertEquals('foo', $carry);
-    }
+    }	
 	
     public function testCreatesPromiseWhenRejectedAfterThen()
     {
@@ -100,18 +67,6 @@ class PromiseTest extends TestCase
         $p2 = $p->then(null, function ($v) use (&$carry) { $carry = $v; });
         $this->assertNotSame($p, $p2);
         $p->reject('foo');
-        $this->loop->run();
-        $this->assertEquals('foo', $carry);
-    }
-	
-    public function testCreatesPromiseWhenRejectedBeforeThen()
-    {
-        $p = new Promise();
-        $p->reject('foo');
-        $carry = null;
-        $p2 = $p->then(null, function ($v) use (&$carry) { $carry = $v; });
-        $this->assertNotSame($p, $p2);
-        $this->assertNull($carry);
         $this->loop->run();
         $this->assertEquals('foo', $carry);
     }	
@@ -138,7 +93,6 @@ class PromiseTest extends TestCase
         $this->assertEquals('foo2', $r2);
     }
 	
-	/////////////////////
     public function testForwardsRejectedPromisesDownChainBetweenGaps()
     {
         $p = new Promise();
@@ -185,39 +139,7 @@ class PromiseTest extends TestCase
         $this->loop->run();
         $this->assertEquals('b', $resolved);
     }
-	
-    public function testForwardsHandlersWhenFulfilledPromiseIsReturned()
-    {
-        $res = [];
-        $p = new Promise();
-        $p2 = new Promise();
-        $p2->resolve('foo');
-        $p2->then(function ($v) use (&$res) { $res[] = 'A:' . $v; });
-        // $res is A:foo
-        $p
-            ->then(function () use ($p2, &$res) { $res[] = 'B'; return $p2; })
-            ->then(function ($v) use (&$res) { $res[] = 'C:' . $v; });
-        $p->resolve('a');
-        $p->then(function ($v) use (&$res) { $res[] = 'D:' . $v; });
-        $this->loop->run();
-        $this->assertEquals(['A:foo', 'B', 'D:a', 'C:foo'], $res);
-    }
-	
-    public function testForwardsHandlersWhenRejectedPromiseIsReturned()
-    {
-        $res = [];
-        $p = new Promise();
-        $p2 = new Promise();
-        $p2->reject('foo');
-        $p2->then(null, function ($v) use (&$res) { $res[] = 'A:' . $v; });
-        $p->then(null, function () use ($p2, &$res) { $res[] = 'B'; return $p2; })
-            ->then(null, function ($v) use (&$res) { $res[] = 'C:' . $v; });
-        $p->reject('a');
-        $p->then(null, function ($v) use (&$res) { $res[] = 'D:' . $v; });
-        $this->loop->run();
-        $this->assertEquals(['A:foo', 'B', 'D:a', 'C:foo'], $res);
-    }
-	
+		
     public function testDoesNotForwardRejectedPromise()
     {
         $res = [];

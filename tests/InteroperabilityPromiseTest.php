@@ -233,22 +233,7 @@ class InteroperabilityPromiseTest extends TestCase
         $this->assertEquals('foo', $r);
         $this->assertSame($e, $r2);
     }
-	
-    public function testForwardsHandlersWhenRejectedPromiseIsReturned()
-    {
-        $res = [];
-        $p = new Promise();
-        $p2 = new Promise();
-        $p2->reject('foo');
-        $p2->then(null, function ($v) use (&$res) { $res[] = 'A:' . $v; });
-        $p->then(null, function () use ($p2, &$res) { $res[] = 'B'; return $p2; })
-            ->then(null, function ($v) use (&$res) { $res[] = 'C:' . $v; });
-        $p->reject('a');
-        $p->then(null, function ($v) use (&$res) { $res[] = 'D:' . $v; });
-        $this->loop->run();
-        $this->assertEquals(['A:foo', 'B', 'D:a', 'C:foo'], $res);
-    }
-	
+		
     public function testForwardsFulfilledDownChainBetweenGaps()
     {
         $p = new Promise();
@@ -275,24 +260,7 @@ class InteroperabilityPromiseTest extends TestCase
         $this->loop->run();
         $this->assertEquals('b', $resolved);
     }
-	
-    public function testForwardsHandlersWhenFulfilledPromiseIsReturned()
-    {		
-        $res = [];
-        $p = new Promise();
-        $p2 = new Promise();
-        $p2->resolve('foo');
-        $p2->then(function ($v) use (&$res) { $res[] = 'A:' . $v; });
-        // $res is A:foo
-        $p
-            ->then(function () use ($p2, &$res) { $res[] = 'B'; return $p2; })
-            ->then(function ($v) use (&$res) { $res[] = 'C:' . $v; });
-        $p->resolve('a');
-        $p->then(function ($v) use (&$res) { $res[] = 'D:' . $v; });
-        $this->loop->run();
-        $this->assertEquals(['A:foo', 'B', 'D:a', 'C:foo'], $res);
-    }	
-	
+		
     public function testDoesNotForwardRejectedPromise()
     {
         $res = [];
@@ -308,34 +276,6 @@ class InteroperabilityPromiseTest extends TestCase
         $this->assertEquals(['B:a', 'D:a'], $res);
     }
 		
-    /**
-     * @expectedException \LogicException
-	 * /expectedExceptionMessage The promise is already resolved
-     * /expectedException \Sabre\Event\PromiseAlreadyResolvedException
-     * /expectedExceptionMessage This promise is already resolved, and you're not allowed to resolve a promise more than once
-     */
-    public function testCannotResolveNonPendingPromise()
-    {
-        $p = new Promise();
-        $p->resolve('foo');
-        $p->resolve('bar');
-        $this->assertEquals('foo', $p->wait());
-    }	
-	
-    /**
-     * @expectedException \LogicException
-     * /expectedExceptionMessage Cannot change a resolved promise to rejected
-     * /expectedException \Sabre\Event\PromiseAlreadyResolvedException
-     * /expectedExceptionMessage This promise is already resolved, and you're not allowed to resolve a promise more than once
-     */
-    public function testCannotRejectNonPendingPromise()
-    {
-        $p = new Promise();
-        $p->resolve('foo');
-        $p->reject('bar');
-        $this->assertEquals('foo', $p->wait());
-    }
-	
     /**
      * @doesNotPerformAssertions
 	 * /expected Risky - No Tests Performed!
@@ -360,20 +300,7 @@ class InteroperabilityPromiseTest extends TestCase
         $p = new Promise();
         $p->reject('foo');
         $p->reject('foo');
-    }
-	
-    /**
-     * @expectedException \LogicException
-     * /expectedExceptionMessage Cannot change a resolved promise to rejected
-     * /expectedException \Sabre\Event\PromiseAlreadyResolvedException
-     * /expectedExceptionMessage This promise is already resolved, and you're not allowed to resolve a promise more than once
-     */
-    public function testCannotRejectResolveWithSameValue()
-    {
-        $p = new Promise();
-        $p->resolve('foo');
-        $p->reject('foo');
-    }
+    }	
 		
     public function testCannotCancelNonPending()
     {
@@ -381,32 +308,5 @@ class InteroperabilityPromiseTest extends TestCase
         $p->resolve('foo');
         $p->cancel();
         $this->assertEquals(self::FULFILLED, $p->getState());
-    }
-	
-    public function testCancelsPromiseWithCancelFunction()
-    {
-        $called = false;
-        $p = new Promise(null, function () use (&$called) { $called = true; });
-        $p->cancel();
-        $this->assertEquals(self::REJECTED, $p->getState());
-        $this->assertTrue($called);
-    }
-	
-    public function testCancelsChildPromises()
-    {
-        $called1 = $called2 = $called3 = false;
-        $p1 = new Promise(null, function () use (&$called1) { $called1 = true; });
-        $p2 = new Promise(null, function () use (&$called2) { $called2 = true; });
-        $p3 = new Promise(null, function () use (&$called3) { $called3 = true; });
-        $p4 = $p2->then(function () use ($p3) { return $p3; });
-        $p5 = $p4->then(function () { $this->fail(); });
-        $p4->cancel();
-        $this->assertEquals(self::PENDING, $p1->getState());
-        $this->assertEquals(self::REJECTED, $p2->getState());
-        $this->assertEquals(self::REJECTED, $p4->getState());
-        $this->assertEquals(self::PENDING, $p5->getState());
-        $this->assertFalse($called1);
-        $this->assertTrue($called2);
-        $this->assertFalse($called3);
     }	
 }
