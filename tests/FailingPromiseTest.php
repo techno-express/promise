@@ -3,7 +3,7 @@
 namespace React\Promise;
 //namespace Async\Tests;
 //namespace Sabre\Event\Promise;
-//namespace GuzzleHttp\Promise;
+//namespace GuzzleHttp\Promise\Tests;
 
 
 use Exception;
@@ -12,7 +12,7 @@ use Exception;
 //use Sabre\Event\RejectionException;
 //use Sabre\Event\CancellationException;
 //use Sabre\Event\PromiseAlreadyResolvedException;
-//use GuzzleHttp\Promise;
+//use GuzzleHttp\Promise\Promise;
 //use GuzzleHttp\Promise\TaskQueue;
 //use GuzzleHttp\Promise\PromiseInterface;
 //use GuzzleHttp\Promise\RejectionException;
