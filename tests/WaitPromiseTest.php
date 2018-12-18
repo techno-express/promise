@@ -24,6 +24,7 @@ use React\Promise\Promise;
 use React\EventLoop\Factory;
 //use React\Promise\Internal\CancellationQueue;
 use React\Promise\Deferred;
+use React\Promise\RejectedPromise;
 use React\Promise\UnhandledRejectionException;
 use PHPUnit\Framework\TestCase;
 
@@ -51,6 +52,21 @@ class WaitPromiseTest extends TestCase
 		//$this->loop = \GuzzleHttp\Promise\queue();
 		$this->loop = Factory::create();
 		//$this->loop = new CancellationQueue();
+    }
+	
+    public function testGetsActualWaitValueFromThen()
+    {
+        $p = new Promise(function () use (&$p) { $p->reject('Foo!'); });
+        $p2 = $p->then(null, function ($reason) {
+            return new RejectedPromise($reason);
+        });
+
+        try {
+            $p2->wait();
+            $this->fail('Should have thrown');
+        } catch (\Exception $e) {
+            $this->assertEquals('Foo!', $e->getMessage());
+        }
     }
 	
     public function testWaitResolve()
