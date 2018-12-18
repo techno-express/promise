@@ -91,7 +91,7 @@ class FailingPromiseTest extends TestCase
         $p = new Promise(null, function () use (&$called) { $called = true; });
         $p->cancel();
         $this->assertEquals(self::REJECTED, $p->getState());
-        $this->assertFalse($called);
+        $this->assertTrue($called);
     }
 	
     public function testCancelsChildPromises()
