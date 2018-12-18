@@ -48,7 +48,7 @@ class FailingPromiseTest extends TestCase
 		//Promise::clearLoop();
 		//$this->loop = Promise::getLoop(true);
 		//$this->loop = Loop\instance();
-		//$this->loop = new TaskQueue();
+		//$this->loop = \GuzzleHttp\Promise\queue();
 		$this->loop = Factory::create();
 		//$this->loop = new CancellationQueue();
     }
