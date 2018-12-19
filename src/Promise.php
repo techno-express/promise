@@ -49,16 +49,24 @@ final class Promise implements PromiseInterface
 		
 		/**
 		* The difference in Guzzle promise implementations mainly lay in the construction.
+		* According to https://github.com/promises-aplus/constructor-spec/issues/18 it's not valid.
 		*
-		* According to https://github.com/promises-aplus/constructor-spec/issues/18 it's not valid. 
-		* The constructor starts the fate of the promise. Which has to been delayed, under Guzzle. 
+		* The wait method in Guzzle is necessary under certain callable functions situations. 
+		* Mainly when passing an promise object not fully created, itself. 
 		*
-		* The wait method is necessary in certain callable functions situations. 
-		* The constructor will fail it's execution when trying to access member method that's null. 
-		* It will happen when passing an promise object not fully created, itself.
+		* The constructor will fail it's execution when trying to access member method that's null:
+		* <code>
+		*	$callableAndNullMethodAccess = new Promise(function () use (&$callableAndNullMethodAccess){ 
+		*		$callableAndNullMethodAccess->resolve('Runtime Error'); 
+		*	});
+		* </code>
 		*
-		* Normally an promise is attached to an external running event loop, no need to start the process.
-		* The wait function/method both starts and stops it, internally.
+		* The following routine adds the callback resolver to the event loop.
+		* 
+		* And since an promise is attached to an running event loop, 
+		* no need to start the promises fate. The wait function/method Guzzle have both starts 
+		* and stops promise execution, however the promise implementation should still 
+		* be able run without, should be an optional execution point controlled by the developer.
 		*/
 		$this->waitFunction = is_callable($callResolver) ? $callResolver : null;
 		
