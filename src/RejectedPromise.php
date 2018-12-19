@@ -120,7 +120,7 @@ final class RejectedPromise implements PromiseInterface
     public function wait($unwrap = true)
     {		
         if ($unwrap) {
-            throw $this->reason;
+            throw new \Exception($this->reason);
         }
     }
 }

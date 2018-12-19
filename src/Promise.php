@@ -433,7 +433,7 @@ final class Promise implements PromiseInterface
 				$loop->run();	
 			}
         } catch (\Exception $reason) {
-            if ($this->getState() === self::PENDING) {
+            if ($this->isPending()) {
                 // The promise has not been resolved yet, so reject the promise
                 // with the exception.
                 $this->reject($reason);
@@ -448,10 +448,10 @@ final class Promise implements PromiseInterface
             return $this->value->wait($unwrap);
         }
 		
-		if ($this->getState() === self::PENDING) {
+		if ($this->isPending()) {
             $this->reject('Invoking wait did not resolve the promise');
         } elseif ($unwrap) {
-			if ($this->getState() === self::FULFILLED) {
+			if ($this->isFulfilled()) {
 				// If the state of this promise is resolved, we can return the value.
 				return $this->value();
 			} 

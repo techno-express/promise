@@ -83,7 +83,7 @@ class FailingWaitPromiseTest extends TestCase
     }
 	
     /**
-     * @expectedException \LogicException
+     * @expectedException \Exception
 	 * /expectedExceptionMessage The promise is already resolved
      * /expectedException \Sabre\Event\PromiseAlreadyResolvedException
      * /expectedExceptionMessage This promise is already resolved, and you're not allowed to resolve a promise more than once
@@ -97,7 +97,7 @@ class FailingWaitPromiseTest extends TestCase
     }	
 	
     /**
-     * @expectedException \LogicException
+     * @expectedException \Exception
      * /expectedExceptionMessage Cannot change a resolved promise to rejected
      * /expectedException \Sabre\Event\PromiseAlreadyResolvedException
      * /expectedExceptionMessage This promise is already resolved, and you're not allowed to resolve a promise more than once
