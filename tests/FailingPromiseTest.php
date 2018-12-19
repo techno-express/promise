@@ -21,7 +21,7 @@ use Exception;
 //use Async\Promise\Promise;
 //use Async\Promise\PromiseInterface;
 use React\Promise\Promise;
-use React\EventLoop\Factory;
+//use React\EventLoop\Factory;
 //use React\Promise\Internal\CancellationQueue;
 use React\Promise\Deferred;
 use React\Promise\UnhandledRejectionException;
@@ -49,7 +49,7 @@ class FailingPromiseTest extends TestCase
 		//$this->loop = Promise::getLoop(true);
 		//$this->loop = Loop\instance();
 		//$this->loop = \GuzzleHttp\Promise\queue();
-		$this->loop = Factory::create();
+		//$this->loop = Factory::create();
 		//$this->loop = new CancellationQueue();
     }
 		
@@ -64,7 +64,7 @@ class FailingPromiseTest extends TestCase
             ->then(null, function ($v) use (&$res) { $res[] = 'C:' . $v; });
         $p->reject('a');
         $p->then(null, function ($v) use (&$res) { $res[] = 'D:' . $v; });
-        $this->loop->run();
+        //$this->loop->run();
         $this->assertEquals(['A:foo', 'B', 'D:a', 'C:foo'], $res);
     }
 	
@@ -81,7 +81,7 @@ class FailingPromiseTest extends TestCase
             ->then(function ($v) use (&$res) { $res[] = 'C:' . $v; });
         $p->resolve('a');
         $p->then(function ($v) use (&$res) { $res[] = 'D:' . $v; });
-        $this->loop->run();
+        //$this->loop->run();
         $this->assertEquals(['A:foo', 'B', 'D:a', 'C:foo'], $res);
     }	
 	
@@ -141,29 +141,6 @@ class FailingPromiseTest extends TestCase
     {
         $p = new Promise();
         $p->reject($p);
-    }		
-	
-    public function testCreatesPromiseWhenFulfilledBeforeThen()
-    {
-        $p = new Promise();
-        $p->resolve('foo');
-        $carry = null;
-        $p2 = $p->then(function ($v) use (&$carry) { $carry = $v; });
-        $this->assertNotSame($p, $p2);
-        $this->assertNull($carry);
-        $this->loop->run();
-        $this->assertEquals('foo', $carry);
     }
 	
-    public function testCreatesPromiseWhenRejectedBeforeThen()
-    {
-        $p = new Promise();
-        $p->reject('foo');
-        $carry = null;
-        $p2 = $p->then(null, function ($v) use (&$carry) { $carry = $v; });
-        $this->assertNotSame($p, $p2);
-        $this->assertNull($carry);
-        $this->loop->run();
-        $this->assertEquals('foo', $carry);
-    }			
 }

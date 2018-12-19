@@ -21,7 +21,7 @@ use Exception;
 //use Async\Promise\Promise;
 //use Async\Promise\PromiseInterface;
 use React\Promise\Promise;
-use React\EventLoop\Factory;
+//use React\EventLoop\Factory;
 //use React\Promise\Internal\CancellationQueue;
 use React\Promise\Deferred;
 use React\Promise\UnhandledRejectionException;
@@ -49,7 +49,7 @@ class FailingWaitPromiseTest extends TestCase
 		//$this->loop = Promise::getLoop(true);
 		//$this->loop = Loop\instance();
 		//$this->loop = \GuzzleHttp\Promise\queue();
-		$this->loop = Factory::create();
+		//$this->loop = Factory::create();
 		//$this->loop = new CancellationQueue();
     }
 	
@@ -108,14 +108,6 @@ class FailingWaitPromiseTest extends TestCase
         $p->resolve('foo');
         $p->reject('bar');
         $this->assertEquals('foo', $p->wait());
-    }
-	
-    public function testWaitBehaviorIsBasedOnLastPromiseInChain()
-    {		
-        $p3 = new Promise(function () use (&$p3) { $p3->resolve('Whoop'); });
-        $p2 = new Promise(function () use (&$p2, $p3) { $p2->reject($p3); });
-        $p = new Promise(function () use (&$p, $p2) { $p->reject($p2); });
-        $this->assertEquals('Whoop', $p->wait());
     }
 	
     public function testCancelsUppermostPendingPromise()

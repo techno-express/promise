@@ -29,6 +29,7 @@ final class Promise implements PromiseInterface
     private static $loop = null;
 	private $waitFunction;
     private $isWaitRequired = false;
+    private $value;
 
     public function __construct( ...$resolverCanceller)
     {
@@ -259,7 +260,8 @@ final class Promise implements PromiseInterface
         if (null !== $this->result) {
             return;
         }
-
+		
+		$this->value = $value;
         $this->settle(resolve($value));
     }
 
@@ -268,7 +270,8 @@ final class Promise implements PromiseInterface
         if (null !== $this->result) {
             return;
         }
-
+		
+		$this->value = $reason;
         $this->settle(reject($reason));
     }
 
@@ -441,6 +444,9 @@ final class Promise implements PromiseInterface
             }
         }
 
+		if ($this->value instanceof PromiseInterface) {
+            return $this->value->wait($unwrap);
+        }
 		
 		if ($this->getState() === self::PENDING) {
             $this->reject('Invoking wait did not resolve the promise');

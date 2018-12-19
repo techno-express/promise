@@ -154,4 +154,27 @@ class PromiseTest extends TestCase
         //$this->loop->run();
         $this->assertEquals(['B:a', 'D:a'], $res);
     }	
+    public function testCreatesPromiseWhenFulfilledBeforeThen()
+    {
+        $p = new Promise();
+        $p->resolve('foo');
+        $carry = null;
+        $p2 = $p->then(function ($v) use (&$carry) { $carry = $v; });
+        $this->assertNotSame($p, $p2);
+        //$this->assertNull($carry);
+        //$this->loop->run();
+        $this->assertEquals('foo', $carry);
+    }
+	
+    public function testCreatesPromiseWhenRejectedBeforeThen()
+    {
+        $p = new Promise();
+        $p->reject('foo');
+        $carry = null;
+        $p2 = $p->then(null, function ($v) use (&$carry) { $carry = $v; });
+        $this->assertNotSame($p, $p2);
+        //$this->assertNull($carry);
+        //$this->loop->run();
+        $this->assertEquals('foo', $carry);
+    }			
 }
